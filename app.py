@@ -1,23 +1,43 @@
 from flask import Flask, request, jsonify
 import numpy as np
-import pickle
+import joblib
 import os
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-model_path = 'backward_gaussian_nb_model.pkl'
+model_path = 'backward_gaussian_nb_model.joblib'
 if os.path.exists(model_path):
-    with open(model_path, 'rb') as f:
-        model = pickle.load(f)
+    model = joblib.load(model_path)
 else:
     raise FileNotFoundError("Model not found. Please train the model first.")
+
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        'status': 'online',
+        'message': 'API is running. Send POST request to /predict endpoint.'
+    })
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+            
+        required_fields = ['age', 'duration', 'campaign', 'previous']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
         
         age = float(data.get('age'))
         duration = float(data.get('duration'))
@@ -27,18 +47,36 @@ def predict():
         input_data = np.array([[age, duration, campaign, previous]])
         
         prediction = model.predict(input_data)
+        prediction_proba = model.predict_proba(input_data)[0].tolist() if hasattr(model, 'predict_proba') else None
         
-        return jsonify({
+        response = {
             'success': True,
             'prediction': int(prediction[0]),
             'prediction_label': 'yes' if prediction[0] == 1 else 'no'
-        })
+        }
+        
+        if prediction_proba:
+            response['probability'] = {
+                'no': prediction_proba[0],
+                'yes': prediction_proba[1]
+            }
+            
+        return jsonify(response)
     
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid input format: {str(e)}'
+        }), 400
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
-        }), 400
+        }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
+else:
+    application = app
+
+
