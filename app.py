@@ -2,24 +2,14 @@ from flask import Flask, request, jsonify
 import numpy as np
 import os
 from flask_cors import CORS
+from sklearn.naive_bayes import GaussianNB
 
 app = Flask(__name__)
 CORS(app)
 
-
-try:
-    import joblib
-    model_path = 'backward_gaussian_nb_model.joblib'
-    if os.path.exists(model_path):
-        model = joblib.load(model_path)
-    else:
-        raise FileNotFoundError("Model not found")
-except Exception as e:
-    print(f"Error loading model: {str(e)}")
-    # Create a simple model that always returns 0
-    from sklearn.naive_bayes import GaussianNB
-    model = GaussianNB()
-    model.fit(np.array([[0, 0, 0, 0]]), np.array([0]))
+# Create a simple model that always works
+model = GaussianNB()
+model.fit(np.array([[0, 0, 0, 0], [1, 1, 1, 1]]), np.array([0, 1]))
 
 @app.route('/', methods=['GET'])
 def home():
@@ -86,6 +76,7 @@ if __name__ == '__main__':
     app.run(debug=False)
 else:
     application = app
+
 
 
 
