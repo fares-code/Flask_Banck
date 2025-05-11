@@ -6,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# Try to load the model, if it fails, create a simple model
+
 try:
     import joblib
     model_path = 'backward_gaussian_nb_model.joblib'
